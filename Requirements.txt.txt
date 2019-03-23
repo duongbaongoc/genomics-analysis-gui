@@ -1,0 +1,7 @@
+Please make sure you have the followings installed before running the program Analyze:
+	+ Python 3.7 (https://www.python.org/downloads/)
+	+ Package paramiko (http://www.paramiko.org/installing.html)
+
+To run the program, simply double click on it.
+
+Contact info: ngoc.duong@wsu.edu
