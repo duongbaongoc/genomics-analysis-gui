@@ -1,6 +1,7 @@
 Please make sure you have the followings installed before running the program Analyze:
 	+ Python 3.7 (https://www.python.org/downloads/)
-	+ Package paramiko (http://www.paramiko.org/installing.html)
+	+ paramiko (a python library. http://www.paramiko.org/installing.html. You can try this on command prompt: python -m pip install paramiko)
+	+ pscp (a Windows command. download and install in command prompt, usually: python -m pip install pscp)
 
 To run the program, simply double click on it.
 
