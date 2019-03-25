@@ -66,7 +66,7 @@ def connect_to_server():
                     os.remove("configs.txt")
             
         get_number_of_avail_cores()
-        messagebox.showinfo("Congrat!", "Connected to %s !\nCick OK to proceed" %ip)
+        messagebox.showinfo("Congrats!", "Connected to %s !\nCick OK to proceed" %ip)
         app.destroy()
         app = Window2(root)
         
@@ -297,6 +297,14 @@ class Window1(Frame): #to connect to server
 
         # creating a radiobutton to choose save credentials or not
         create_label("Save the server on this computer?",4)
+        def display_help():
+                messagebox.showinfo("Info", "If choose 'yes' and the server is connected, the program will remember this server info for next time use.\n If choose 'no' and the server is connected, all server info ever saved by this program in this computer will be deleted.")
+                
+        helpButton = Button(root, text="?", font=labelfont, command = display_help)
+        helpButton["bg"] = "yellow"
+        helpButton.pack()
+        helpButton.place(x=500, y=70+50*4)
+        
         var = IntVar()
         var.set(0)
         def sel():
