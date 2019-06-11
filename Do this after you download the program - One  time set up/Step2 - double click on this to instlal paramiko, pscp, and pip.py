@@ -26,6 +26,12 @@ failure = os.system("python -m pip install pscp")
 if (failure):
 	messagebox.showerror("Error", "Failed to install pscp")
 	exit()
+
+#pandas
+failure = os.system("python -m pip install pandas")
+if (failure):
+	messagebox.showerror("Error", "Failed to install pandas")
+	exit()
 	
 	
 messagebox.showinfo("Congrats!", "Successfully installed all dependencies (Python, paramiko, pscp)")

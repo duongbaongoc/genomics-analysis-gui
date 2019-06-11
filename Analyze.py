@@ -10,14 +10,16 @@ import paramiko
 import time
 
 #global variables
-width = 600
-height = 400
-wdir = "Click here to open directory dialog"
-keyfile = "Click here to open file dialog"
-n_process = 0 #chosen number of cores to run
+width = 500
+height = 350
+wdir = "Open directory dialog"
+keyfile = "Open file dialog"
+n_process = 24 #chosen number of cores to run
 n_avail_cores = 0
 percentage = 1.0
-is_saved = 0 #0==no, 1==yes <= want to save the server info in this computer?
+het_percentage = 0.20
+hit_count = 5
+is_saved = 1 #0==no, 1==yes <= want to save the server info in this computer?
 root = None
 app = None
 labelfont = ('times', 12, 'bold')
@@ -66,11 +68,11 @@ def connect_to_server():
                     os.remove("configs.txt")
             
         get_number_of_avail_cores()
-        messagebox.showinfo("Congrats!", "Connected to %s !\nCick OK to proceed" %ip)
         app.destroy()
+        root.geometry(str(width - 30) + "x" + str(height + 130))
         app = Window2(root)
         
-        
+
 #################################################
 ######run the analysis in the server#############
 def retrieve_previous_configs(): #save to/retrieve from configs.txt
@@ -117,14 +119,15 @@ def save_previous_dirs(): #save to/retrieve from configs.txt
 def reset(): #reset the program
         global app
         app.destroy()
+        root.geometry(str(width) + "x" + str(height))
         app = Window1(root)
         
 def run_analysis(wdir, keyfile, n_process):
     #check if all parameters are chosen
-    if (wdir == "Click here to open directory dialog"):
+    if (wdir == "Open directory dialog"):
         messagebox.showerror("Error", "Choose a folder to analyze")
         return
-    if (keyfile == "Click here to open file dialog"):
+    if (keyfile == "Open file dialog"):
         messagebox.showerror("Error", "Choose a key file")
         return
 
@@ -135,7 +138,7 @@ def run_analysis(wdir, keyfile, n_process):
         #create a folder A in TAScli to store the wdir and the keyfile
         folder_name = str(time.time())
         stdin, stdout, stderr = ssh.exec_command("mkdir -m 777 /home/seq_user/TAScli/" + folder_name)
-        messagebox.showinfo("Info", "The analysis on " + wdir + " using the key file " + keyfile + " is about to run.\nThe program will not be responding. DO NOT CLOSE THE PROGRAM until you are notified that the analysis is complete.\nClick OK to run.")
+        messagebox.showinfo("Info", "The analysis is about to run.\nThe program will freeze. DO NOT CLOSE THE PROGRAM until it says the analysis is complete.")
       
         #move the wdir and the keyfile from this machine to the server
         fail = os.system("pscp -pw " + password + " -r " + wdir + " " + username + "@" + ip + ":/home/seq_user/TAScli/" + folder_name)
@@ -148,35 +151,25 @@ def run_analysis(wdir, keyfile, n_process):
                 return
 
         #run the anaylysis on the server
-        if (percentage == 1.0):
-                command = "cd TAScli; perl TAScli.pl " + folder_name + "/" + os.path.basename(wdir) + " " + folder_name + "/" + os.path.basename(keyfile) + " " + str(n_process) + " 1.0"
-                stdin, stdout, stderr = ssh.exec_command(command)
-        else: #95%
-                command = "cd TAScli; perl TASapprox.pl " + folder_name + "/" + os.path.basename(wdir) + " " + folder_name + "/" + os.path.basename(keyfile) + " " + str(n_process) + " 0.95"
-                print (command)
-                return
-                stdin, stdout, stderr = ssh.exec_command(command)
-        
+        command = "cd TAScli; python TAScli.py " + folder_name + "/" + os.path.basename(wdir) + " " + folder_name + "/" + os.path.basename(keyfile) + " " + str(n_process) + " " + str(percentage) + " " + str(het_percentage) + " " + str(hit_count)
+        print (command)
+        stdin, stdout, stderr = ssh.exec_command(command)
         exit_status = stdout.channel.recv_exit_status()          # Blocking call
         if exit_status != 0:
-            print("Error", exit_status, "faied to run", command)
-        		
-        #copy result  files from the server to this machine
+            print("Error", exit_status, "faied to run", command)       
+
+        #copy result files from the server to this machine
         if os.path.exists(wdir + "/Analysis"):	
             os.rename(wdir + "/Analysis", wdir + "/Analysis_pre_modified_at_" + str(os.path.getmtime(wdir + "/Analysis")))
         os.mkdir(wdir + "/Analysis")
         os.system("pscp -pw " + password + " " + username + "@" + ip + ":/home/seq_user/TAScli/" + folder_name + "/" + os.path.basename(wdir) + "/Analysis/* " + wdir + "/Analysis")
-        
-        outfile = open(wdir + "/Analysis/how_to_open_files.txt", 'w')
-        outfile.write("Open hitcount.txt, HitCounts.lst, snpreport.txt, or SNPreport.lst using Excel for best readability.")
-        outfile.close()
 		
         #clean up folders in the server
         stdin, stdout, stderr = ssh.exec_command("rm -r TAScli/" + folder_name) 
         exit_status = stdout.channel.recv_exit_status()          # Blocking call
         if exit_status == 0:
-            messagebox.showinfo("Info", "The analysis on " + wdir + "using the key file " + keyfile + " is complete.\nThe result files are stored in " + wdir + "/Analysis.\nYou are safe to close the program or run another analysis.")
             reset() #reset the program
+            messagebox.showinfo("Info", "The analysis is complete.\nThe results are saved in " + wdir + "/Analysis.")
         else:
             print("Error", exit_status)
         
@@ -196,16 +189,19 @@ def get_number_of_avail_cores():
         global n_avail_cores
         #get the total number of cores
         stdin, stdout, stderr = ssh.exec_command("lscpu")
+        exit_status = stdout.channel.recv_exit_status()          # Blocking call
         total_cpus = int(str(stdout.read()).split("\\n")[3].split(" ")[-1])
         #get number of avail cores
         set_running_cores = set()
         stdin, stdout, stderr = ssh.exec_command("top -i -b -n1")
+        exit_status = stdout.channel.recv_exit_status()          # Blocking call
         lines = str(stdout.read()).split("\\n")
         pids = [line.lstrip().split(" ")[0] for line in lines[7:-2]]
         command = "ps -o pid,psr,comm -p"
         for pid in pids:
                 command += " " + pid
         stdin, stdout, stderr = ssh.exec_command(command)
+        exit_status = stdout.channel.recv_exit_status()          # Blocking call
         pid_cpu_task_s = str(stdout.read()).split("\\n")
         if (len(pid_cpu_task_s) > 2):
                 for line in pid_cpu_task_s[1:-1]:
@@ -230,11 +226,11 @@ def get_keyfile():
     if (filename != ""):
         keyfile = filename
         
-def create_label(text, n): #n = 0,1,2,3...
-        label = Label(text = text)
-        label.configure(font=labelfont)
+def create_label(frame, text, n, indent, color): #n = 0,1,2,3...
+        label = Label(frame, text = text)
+        label.configure(font=labelfont, bg = color)
         label.pack()
-        label.place(x=30, y=70+50*n)
+        label.place(x=30 + indent*10, y=50*n)
 
 
 class Window1(Frame): #to connect to server
@@ -248,13 +244,16 @@ class Window1(Frame): #to connect to server
     #Creation of init_window
     def init_window(self):
         # changing the title of our master widget      
-        self.master.title("GMS")
+        self.master.title("GMS: Analyze Data")
 
         # allowing the widget to take the full space of the root window
         self.pack(fill=BOTH, expand=1)
 
+        #frame
+        top_frame = Frame(self, bg='LavenderBlush2', width = width, height = 250).grid(row = 0, columnspan = 1)
+        
         # creating a input field to prompt server ip
-        create_label("Server IP:", 1)
+        create_label(top_frame, "Server IP:", 1,0, 'LavenderBlush2')
 
         def get_ip(v):
                 global ip
@@ -262,13 +261,13 @@ class Window1(Frame): #to connect to server
         
         ipVar = StringVar()
         ipVar.trace("w", lambda name, index, mode, sv=ipVar: get_ip(sv))
-        ipPrompt = Entry(self, textvariable=ipVar, font=labelfont)
+        ipPrompt = Entry(top_frame, textvariable=ipVar, font=labelfont)
         ipPrompt.insert(END, ip)
         ipPrompt.pack()
-        ipPrompt.place(x=300, y=70+50*1, width=200)
+        ipPrompt.place(x=200, y=50*1, width=200)
         
         # creating a input field to prompt username
-        create_label("Server Username:",2)
+        create_label(top_frame, "Server Username:",2,0, 'LavenderBlush2')
         
         def get_username(v):
                 global username
@@ -276,13 +275,13 @@ class Window1(Frame): #to connect to server
         
         usernameVar = StringVar()
         usernameVar.trace("w", lambda name, index, mode, sv=usernameVar: get_username(sv))
-        usernamePrompt = Entry(self, textvariable=usernameVar, font=labelfont)
+        usernamePrompt = Entry(top_frame, textvariable=usernameVar, font=labelfont)
         usernamePrompt.insert(END, username)
         usernamePrompt.pack()
-        usernamePrompt.place(x=300, y=70+50*2, width=200)
+        usernamePrompt.place(x=200, y=50*2, width=200)
 
         # creating a input field to prompt password
-        create_label("Server Password:", 3)
+        create_label(top_frame, "Server Password:", 3,0, 'LavenderBlush2')
         
         def get_password(v):
                 global password
@@ -290,42 +289,46 @@ class Window1(Frame): #to connect to server
         
         passwordVar = StringVar()
         passwordVar.trace("w", lambda name, index, mode, sv=passwordVar: get_password(sv))
-        passwordPrompt = Entry(self, textvariable=passwordVar, font=labelfont, show="*")
+        passwordPrompt = Entry(top_frame, textvariable=passwordVar, font=labelfont, show="*")
         passwordPrompt.insert(END, password)
         passwordPrompt.pack()
-        passwordPrompt.place(x=300, y=70+50*3, width=200)
+        passwordPrompt.place(x=200, y=50*3, width=200)
 
         # creating a radiobutton to choose save credentials or not
-        create_label("Save the server on this computer?",4)
+        create_label(top_frame, "Save the server info?",4,0, 'LavenderBlush2')
         def display_help():
                 messagebox.showinfo("Info", "If choose 'yes' and the server is connected, the program will remember this server info for next time use.\n If choose 'no' and the server is connected, all server info ever saved by this program in this computer will be deleted.")
                 
-        helpButton = Button(root, text="?", font=labelfont, command = display_help)
+        helpButton = Button(top_frame, text="?", font=labelfont, command = display_help)
         helpButton["bg"] = "yellow"
         helpButton.pack()
-        helpButton.place(x=500, y=70+50*4)
+        helpButton.place(x=400, y=50*4)
         
         var = IntVar()
-        var.set(0)
+        var.set(1)
         def sel():
                 global is_saved
                 is_saved = var.get()
                 
         R1 = Radiobutton(root, text="Yes", variable=var, value=1, command=sel, font=labelfont)
+        R1.configure(bg = 'LavenderBlush2')
         R1.pack()
-        R1.place(x=300, y=70+50*4)
+        R1.place(x=200, y=50*4)
         R2 = Radiobutton(root, text="No", variable=var, value=0, command=sel, font=labelfont)
+        R2.configure(bg = 'LavenderBlush2')
         R2.pack()
-        R2.place(x=400, y=70+50*4)
+        R2.place(x=300, y=50*4)
+
+        #frame
+        bottom_frame = Frame(self, bg='light blue', width = width, height = 200).grid(row = 1, columnspan = 1)
         
         # creating a button to connect to the server
-        connectButton = Button(self, text="Connect", command = connect_to_server)
-        connectButton.place(x=300, y=70+50*4 + 80)
-        connectButton.config(bg="green2", font=labelfont)
+        connectButton = Button(bottom_frame, text="Connect", command = connect_to_server)
+        connectButton.place(x=200, y=50*4 + 80)
+        connectButton.config(bg="ghost white", font=labelfont)
 
 
 class Window2(Frame): #to run the analysis
-
 
     def __init__(self, master=None):
         Frame.__init__(self, master)                 
@@ -335,13 +338,16 @@ class Window2(Frame): #to run the analysis
     #Creation of init_window
     def init_window(self):
         # changing the title of our master widget      
-        self.master.title("GMS")
+        self.master.title("GMS: Analyze Data")
 
         # allowing the widget to take the full space of the root window
         self.pack(fill=BOTH, expand=1)
 
+        #frame
+        top_frame = Frame(self, bg='thistle2', width = width, height = 240).grid(row = 0, columnspan = 1)
+        
         # creating a button to get wdir
-        create_label("Choose the folder to analyze:",1)
+        create_label(top_frame, "Folder of data:",1,0, 'thistle2')
         wdirButtonText = StringVar()
 
         def master_get_wdir():
@@ -349,11 +355,11 @@ class Window2(Frame): #to run the analysis
             wdirButtonText.set(wdir)
         
         wdirButton = Button(self, textvariable=wdirButtonText, command=master_get_wdir, cursor = cursor_img, font=labelfont)
-        wdirButton.place(x=300, y=70+50*1)
-        wdirButtonText.set("Click here to open directory dialog")
+        wdirButton.place(x=200, y=50*1)
+        wdirButtonText.set("Open directory dialog")
 
         # creating a button to get keyfile
-        create_label("Choose the key file:", 2)
+        create_label(top_frame, "Key file:", 2,0, 'thistle2')
         keyfileButtonText = StringVar()
 
         def master_get_keyfile():
@@ -361,45 +367,74 @@ class Window2(Frame): #to run the analysis
             keyfileButtonText.set(keyfile)
         
         keyfileButton = Button(self, textvariable=keyfileButtonText, command=master_get_keyfile, cursor = cursor_img, font=labelfont)
-        keyfileButton.place(x=300, y=70+50*2)
-        keyfileButtonText.set("Click here to open file dialog")
+        keyfileButton.place(x=200, y=50*2)
+        keyfileButtonText.set("Open file dialog")
 
-        # creating a dropdown to get number of processes
-        create_label("Choose the number of processes:",3)
-        
-        options = [i for i in range(1,n_avail_cores + 1)]
-        n_process_dropdown_var = StringVar()
-        n_process_dropdown_var.set(1) #default
-        n_process_dropdown = Combobox(height=10, state="readonly", textvariable=n_process_dropdown_var, values=options)
-        n_process_dropdown.configure(cursor=cursor_img, font=labelfont)
-        n_process_dropdown.pack()
-        n_process_dropdown.place(x=300, y=70+50*3)
-
-        def get_n_process(*args):
-            global n_process
-            n_process = n_process_dropdown_var.get()
-    
-        n_process_dropdown_var.trace('w', get_n_process)
-
-        # creating a radiobutton to choose 100% or 95%
-        create_label("Minumim percentage of similarity:",4)
-        var = IntVar()
-        var.set(1.0)
-        def sel():
-                global percentage
-                percentage = var.get()
+        # creating a slide to get number of processes
+        create_label(top_frame, "Number of processes:",3,0, 'thistle2')
+        var0 = IntVar()
+        var0.set(24)
+        def get_n_process(val):
+                global n_process
+                n_process = val
                 
-        R1 = Radiobutton(root, text="95%", variable=var, value=0.95, command=sel, font=labelfont)
-        R1.pack()
-        R1.place(x=300, y=70+50*4)
-        R2 = Radiobutton(root, text="100%", variable=var, value=1.0, command=sel, font=labelfont)
-        R2.pack()
-        R2.place(x=400, y=70+50*4)
+        S0 = Scale(root, from_=1, to=n_avail_cores, resolution=1, variable=var0, showvalue=24, command=get_n_process, font=labelfont, orient=HORIZONTAL, length = 200)
+        S0.configure(bg = 'thistle2', highlightbackground = 'thistle2')
+        S0.pack()
+        S0.place(x=200, y=50*3-10)
+
+        # creating a slider (scale) for min sim
+        create_label(top_frame, "Similarity (%):",4,0, 'thistle2')
+        var1 = DoubleVar()
+        var1.set(100)
+        def sel(val):
+                global percentage
+                percentage = int(val)/100.0
+                
+        S1 = Scale(root, from_=0, to=100, resolution=1, variable=var1, showvalue=100, command=sel, font=labelfont, orient=HORIZONTAL, length = 200)
+        S1.configure(bg = 'thistle2', highlightbackground = 'thistle2')
+        S1.pack()
+        S1.place(x=200, y=50*4-10)
+        
+        #frame
+        middle_frame = Frame(self, bg='wheat', width = width, height = 150).grid(row = 1, columnspan = 1)
+
+        #text: heterozygotes
+        create_label(middle_frame, "HETEROZYGOTES filter:",5,0, 'wheat')
+        
+        #creating a scale to choose het percentage to filter
+        create_label(middle_frame, "Percentage (%):",6,3, 'wheat')
+        var2 = DoubleVar()
+        var2.set(20)
+        def het(val):
+                global het_percentage
+                het_percentage = int(val)/100.0
+                
+        S2 = Scale(root, from_=0, to=100, resolution=1, variable=var2, showvalue=20, command=het, font=labelfont, orient=HORIZONTAL, length = 200)
+        S2.configure(bg = 'wheat', highlightbackground = 'wheat')
+        S2.pack()
+        S2.place(x=200, y=50*6-10)
+        
+        #creating a scale to choose min hit-count to filter
+        create_label(middle_frame, "Min. hit counts:",7,3, 'wheat')
+        var3 = DoubleVar()
+        var3.set(5)
+        def hitcount(val):
+                global hit_count
+                hit_count = int(val)
+                
+        S3 = Scale(root, from_=0, to=100, resolution=1, variable=var3, showvalue=5, command=hitcount, font=labelfont, orient=HORIZONTAL, length = 200)
+        S3.configure(bg = 'wheat', highlightbackground = 'wheat')
+        S3.pack()
+        S3.place(x=200, y=50*7-10)
+
+        #frame
+        bottom_frame = Frame(self, bg='light blue', width = width, height = 200).grid(row = 2, columnspan = 1)
         
         # creating a button to run the analysis
         runButton = Button(self, text="Run", command=lambda: run_analysis(wdir, keyfile, n_process), cursor = cursor_img)
-        runButton.place(x=width/2-5, y=70+50*4 + 80)
-        runButton.config(bg="green2", font=labelfont)
+        runButton.place(x=width/2-25, y=70+50*6 + 50)
+        runButton.config(bg="ghost white", font=labelfont)
         
 		
 if __name__ == "__main__":
