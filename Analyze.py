@@ -8,6 +8,8 @@ import sys #exit()
 #######libraries to connect to a remote server
 import paramiko
 import time
+import warnings
+warnings.filterwarnings("ignore")
 
 #global variables
 width = 500
@@ -16,6 +18,7 @@ wdir = "Open directory dialog"
 keyfile = "Open file dialog"
 n_process = 24 #chosen number of cores to run
 n_avail_cores = 0
+n_nodes = 2 #96-core
 percentage = 1.0
 het_percentage = 0.20
 hit_count = 5
@@ -117,12 +120,40 @@ def save_previous_dirs(): #save to/retrieve from configs.txt
 	outfile.close()
 	
 def reset(): #reset the program
+        global width
+        global height
+        global wdir
+        global keyfile
+        global n_process
+        global n_avail_cores
+        global n_nodes
+        global percentage
+        global het_percentage
+        global hit_count
+        global is_saved
+        global root
         global app
+        global ssh
+        #reset global variables
+        width = 500
+        height = 350
+        wdir = "Open directory dialog"
+        keyfile = "Open file dialog"
+        n_process = 24 #chosen number of cores to run
+        n_avail_cores = 0
+        n_nodes = 2 #96-core
+        percentage = 1.0
+        het_percentage = 0.20
+        hit_count = 5
+        is_saved = 1 #0==no, 1==yes <= want to save the server info in this computer?
+        ssh = None
+        #reset window        
         app.destroy()
         root.geometry(str(width) + "x" + str(height))
         app = Window1(root)
         
-def run_analysis(wdir, keyfile, n_process):
+        
+def run_32(wdir, keyfile, n_process):
     #check if all parameters are chosen
     if (wdir == "Open directory dialog"):
         messagebox.showerror("Error", "Choose a folder to analyze")
@@ -150,10 +181,28 @@ def run_analysis(wdir, keyfile, n_process):
                 print("Error: Failed to copy " + keyfile + " to the server.")
                 return
 
-        #run the anaylysis on the server
-        command = "cd TAScli; python TAScli.py " + folder_name + "/" + os.path.basename(wdir) + " " + folder_name + "/" + os.path.basename(keyfile) + " " + str(n_process) + " " + str(percentage) + " " + str(het_percentage) + " " + str(hit_count)
+        #run the analysis on the server
+        command ="cd TAScli; python TAScli.py " + folder_name + "/" + os.path.basename(wdir) + " " + folder_name + "/" + os.path.basename(keyfile) + " " + str(n_process) + " " + str(percentage) + " " + str(het_percentage) + " " + str(hit_count)
         print (command)
         stdin, stdout, stderr = ssh.exec_command(command)
+        ###Start checking the progress
+        time.sleep(30)
+        stdin, stdout0, stderr = ssh.exec_command("cd TAScli/" + folder_name + "/" + os.path.basename(wdir) + "/" + "Analysis/Markers; ls | wc -l")
+        stdout0 = int(str(stdout0.read())[2:-3])
+        time.sleep(20)
+        stdin, stdout1, stderr = ssh.exec_command("cd TAScli/" + folder_name + "/" + os.path.basename(wdir) + "/" + "Analysis/Markers; ls | wc -l")
+        stdout1 = int(str(stdout1.read())[2:-3])
+        while (stdout1 != stdout0):
+                stdout0 = stdout1
+                time.sleep(20)
+                stdin, stdout1, stderr = ssh.exec_command("cd TAScli/" + folder_name + "/" + os.path.basename(wdir) + "/" + "Analysis/Markers; ls | wc -l")
+                stdout1 = int(str(stdout1.read())[2:-3])
+        stdin, stdout, stderr = ssh.exec_command("cd TAScli; cat " + folder_name + "/" + os.path.basename(keyfile) + "| wc -l")
+        expected_num_files_Markers = int(str(stdout.read())[2:-3]) / 2
+        if (stdout0 != expected_num_files_Markers):
+                messagebox.showinfo("IMPORTANT", "The GUI is encountering a problem. It will close after you click OK. The analyzis is still running just fine. The result files will not be downloaded to this computer but will locate in the 32-core server in folder " + folder_name + "/" + os.path.basename(wdir))
+                sys.exit()
+        ##End checing the progess
         exit_status = stdout.channel.recv_exit_status()          # Blocking call
         if exit_status != 0:
             print("Error", exit_status, "faied to run", command)       
@@ -172,14 +221,77 @@ def run_analysis(wdir, keyfile, n_process):
             messagebox.showinfo("Info", "The analysis is complete.\nThe results are saved in " + wdir + "/Analysis.")
         else:
             print("Error", exit_status)
-        
-
     except Exception as e:
         print ("Error: a command can not be executed from the server")
         print (e.message)
         err = ''.join(stderr.readlines())
         out = ''.join(stdout.readlines())
         final_output = str(out)+str(err)
+
+        
+def run_96(wdir, keyfile, n_nodes):
+    #check if all parameters are chosen
+    if (wdir == "Open directory dialog"):
+        messagebox.showerror("Error", "Choose a folder to analyze")
+        return
+    if (keyfile == "Open file dialog"):
+        messagebox.showerror("Error", "Choose a key file")
+        return
+
+    save_previous_dirs()
+    
+    #run analysis
+    try:
+        #create a folder A in TAS to store the wdir and the keyfile
+        folder_name = str(time.time())
+        stdin, stdout, stderr = ssh.exec_command("mkdir -m 777 /home/wrsggl/TAS/" + folder_name)
+        messagebox.showinfo("Info", "The analysis is about to run.\nThe program will freeze. DO NOT CLOSE THE PROGRAM until it says the analysis is complete.")
+        
+        #move the wdir and the keyfile from this machine to the server
+        fail = os.system("pscp -pw " + password + " -r " + wdir + " " + username + "@" + ip + ":/home/wrsggl/TAS/" + folder_name)
+        if fail:
+                print("Error: Failed to copy " + wdir + " to the server.")
+                return
+        fail = os.system("pscp -pw " + password + " " + keyfile + " " + username + "@" + ip + ":/home/wrsggl/TAS/" + folder_name)
+        if fail:
+                print("Error: Failed to copy " + keyfile + " to the server.")
+                return
+        
+        #run the analysis on the server
+        command = "cd TAS; python TAScli.py " + folder_name + "/" + os.path.basename(wdir) + " " + folder_name + "/" + os.path.basename(keyfile) + " " + str(n_nodes) + " " + str(percentage)
+        print (command)
+        stdin, stdout, stderr = ssh.exec_command(command)
+        exit_status = stdout.channel.recv_exit_status()          # Blocking call
+        if exit_status != 0:
+            print("Error", exit_status, "faied to run", command)
+            
+        #wait until the slurm job finishes
+        stdin, stdout, stderr = ssh.exec_command("squeue")
+        while ("pro366" in str(stdout.read())):
+                stdin, stdout, stderr = ssh.exec_command("squeue")
+        
+        #copy result files from the server to this machine
+        if os.path.exists(wdir + "/Analysis"):	
+            os.rename(wdir + "/Analysis", wdir + "/Analysis_pre_modified_at_" + str(os.path.getmtime(wdir + "/Analysis")))
+        os.mkdir(wdir + "/Analysis")
+        os.system("pscp -pw " + password + " " + username + "@" + ip + ":/home/wrsggl/TAS/" + folder_name + "/" + os.path.basename(wdir) + "/Analysis/* " + wdir + "/Analysis")
+		
+        #clean up folders in the server
+        stdin, stdout, stderr = ssh.exec_command("rm -r TAS/" + folder_name) 
+        exit_status = stdout.channel.recv_exit_status()          # Blocking call
+        if exit_status == 0:
+            reset() #reset the program
+            messagebox.showinfo("Info", "The analysis is complete.\nThe results are saved in " + wdir + "/Analysis.")
+        else:
+            print("Error", exit_status)
+        
+    except Exception as e:
+        print ("Error: a command can not be executed from the server")
+        print (e.message)
+        err = ''.join(stderr.readlines())
+        out = ''.join(stdout.readlines())
+        final_output = str(out)+str(err)
+        
 
 #####################################
 ######get number of available cores##
@@ -370,19 +482,32 @@ class Window2(Frame): #to run the analysis
         keyfileButton.place(x=200, y=50*2)
         keyfileButtonText.set("Open file dialog")
 
-        # creating a slide to get number of processes
-        create_label(top_frame, "Number of processes:",3,0, 'thistle2')
-        var0 = IntVar()
-        var0.set(24)
-        def get_n_process(val):
-                global n_process
-                n_process = val
-                
-        S0 = Scale(root, from_=1, to=n_avail_cores, resolution=1, variable=var0, showvalue=24, command=get_n_process, font=labelfont, orient=HORIZONTAL, length = 200)
-        S0.configure(bg = 'thistle2', highlightbackground = 'thistle2')
-        S0.pack()
-        S0.place(x=200, y=50*3-10)
-
+        if (username == "seq_user"): #32-core server
+                # creating a slide to get number of processes
+                create_label(top_frame, "Number of processes:",3,0, 'thistle2')
+                var0 = IntVar()
+                var0.set(24)
+                def get_n_process(val):
+                        global n_process
+                        n_process = val
+                        
+                S0 = Scale(root, from_=1, to=n_avail_cores, resolution=1, variable=var0, showvalue=24, command=get_n_process, font=labelfont, orient=HORIZONTAL, length = 200)
+                S0.configure(bg = 'thistle2', highlightbackground = 'thistle2')
+                S0.pack()
+                S0.place(x=200, y=50*3-10)
+        else: #96-core server
+                # creating a slide to get number of nodes
+                create_label(top_frame, "Number of nodes:",3,0, 'thistle2')
+                var0 = IntVar()
+                var0.set(2)
+                def get_n_nodes(val):
+                        global n_nodes
+                        n_nodes = val
+                        
+                S0 = Scale(root, from_=2, to=4, resolution=1, variable=var0, showvalue=2, command=get_n_nodes, font=labelfont, orient=HORIZONTAL, length = 200)
+                S0.configure(bg = 'thistle2', highlightbackground = 'thistle2')
+                S0.pack()
+                S0.place(x=200, y=50*3-10)
         # creating a slider (scale) for min sim
         create_label(top_frame, "Similarity (%):",4,0, 'thistle2')
         var1 = DoubleVar()
@@ -398,41 +523,45 @@ class Window2(Frame): #to run the analysis
         
         #frame
         middle_frame = Frame(self, bg='wheat', width = width, height = 150).grid(row = 1, columnspan = 1)
-
-        #text: heterozygotes
-        create_label(middle_frame, "HETEROZYGOTES filter:",5,0, 'wheat')
-        
-        #creating a scale to choose het percentage to filter
-        create_label(middle_frame, "Percentage (%):",6,3, 'wheat')
-        var2 = DoubleVar()
-        var2.set(20)
-        def het(val):
-                global het_percentage
-                het_percentage = int(val)/100.0
+        if (username == "seq_user"): #32-core server; this is temporary because 96-core programs do not have filter
+                #text: heterozygotes
+                create_label(middle_frame, "HETEROZYGOTES filter:",5,0, 'wheat')
                 
-        S2 = Scale(root, from_=0, to=100, resolution=1, variable=var2, showvalue=20, command=het, font=labelfont, orient=HORIZONTAL, length = 200)
-        S2.configure(bg = 'wheat', highlightbackground = 'wheat')
-        S2.pack()
-        S2.place(x=200, y=50*6-10)
-        
-        #creating a scale to choose min hit-count to filter
-        create_label(middle_frame, "Min. hit counts:",7,3, 'wheat')
-        var3 = DoubleVar()
-        var3.set(5)
-        def hitcount(val):
-                global hit_count
-                hit_count = int(val)
+                #creating a scale to choose het percentage to filter
+                create_label(middle_frame, "Percentage (%):",6,3, 'wheat')
+                var2 = DoubleVar()
+                var2.set(20)
+                def het(val):
+                        global het_percentage
+                        het_percentage = int(val)/100.0
+                        
+                S2 = Scale(root, from_=0, to=100, resolution=1, variable=var2, showvalue=20, command=het, font=labelfont, orient=HORIZONTAL, length = 200)
+                S2.configure(bg = 'wheat', highlightbackground = 'wheat')
+                S2.pack()
+                S2.place(x=200, y=50*6-10)
                 
-        S3 = Scale(root, from_=0, to=100, resolution=1, variable=var3, showvalue=5, command=hitcount, font=labelfont, orient=HORIZONTAL, length = 200)
-        S3.configure(bg = 'wheat', highlightbackground = 'wheat')
-        S3.pack()
-        S3.place(x=200, y=50*7-10)
-
+                #creating a scale to choose min hit-count to filter
+                create_label(middle_frame, "Min. hit counts:",7,3, 'wheat')
+                var3 = DoubleVar()
+                var3.set(5)
+                def hitcount(val):
+                        global hit_count
+                        hit_count = int(val)
+                        
+                S3 = Scale(root, from_=0, to=100, resolution=1, variable=var3, showvalue=5, command=hitcount, font=labelfont, orient=HORIZONTAL, length = 200)
+                S3.configure(bg = 'wheat', highlightbackground = 'wheat')
+                S3.pack()
+                S3.place(x=200, y=50*7-10)      
+        else: #96-core server; this is temporary because 96-core programs do not have filter
+                create_label(middle_frame, "**This server does not support to filter snip report**",5,1, 'wheat')
         #frame
         bottom_frame = Frame(self, bg='light blue', width = width, height = 200).grid(row = 2, columnspan = 1)
         
         # creating a button to run the analysis
-        runButton = Button(self, text="Run", command=lambda: run_analysis(wdir, keyfile, n_process), cursor = cursor_img)
+        if (username == "seq_user"): #32-core server
+                runButton = Button(self, text="Run", command=lambda: run_32(wdir, keyfile, n_process), cursor = cursor_img)
+        else: #96-core server
+                runButton = Button(self, text="Run", command=lambda: run_96(wdir, keyfile, n_nodes), cursor = cursor_img)
         runButton.place(x=width/2-25, y=70+50*6 + 50)
         runButton.config(bg="ghost white", font=labelfont)
         

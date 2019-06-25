@@ -123,8 +123,10 @@ def run():
         basename = os.path.basename(wdir)
         dirname = os.path.dirname(wdir)
         wdir = dirname + "/" + basename.replace(" ", "-")
-        os.rename(dirname + "/" + basename, wdir)
-        
+        try:
+                os.rename(dirname + "/" + basename, wdir)
+        except:
+                shutil.copytree(dirname + "/" + basename, wdir)
         #create a folder in wdir to save the data
         data_path = ""
         if (os.path.exists(wdir + "/data-proton-server")):
