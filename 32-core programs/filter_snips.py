@@ -51,7 +51,7 @@ def filter_codes(dict, percent, min_hits):
 	
 	#filter
 	for key,value in dict.items():
-		if value >= accept or value >= min_hits:
+		if value >= accept and value >= min_hits:
 			remain.append(key)
 			total_hits += value
 	return remain, total_hits
