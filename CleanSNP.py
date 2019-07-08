@@ -135,7 +135,7 @@ class Window1(Frame): #to run the analysis
     #Creation of init_window
     def init_window(self):
         # changing the title of our master widget      
-        self.master.title("GMS: Clean up Data in Snip Report")
+        self.master.title("GMS: Clean up Data in SNP Report")
 
         # allowing the widget to take the full space of the root window
         self.pack(fill=BOTH, expand=1)
@@ -144,7 +144,7 @@ class Window1(Frame): #to run the analysis
         top_frame = Frame(self, bg='thistle2', width = width, height = 100).grid(row = 0, columnspan = 1)
 
         # creating a button to get job folder
-        create_label(top_frame, "Snip report file:",1,0, 'thistle2')
+        create_label(top_frame, "SNP report file:",1,0, 'thistle2')
         
         wdirButtonText = StringVar()
         def master_get_wdir():
