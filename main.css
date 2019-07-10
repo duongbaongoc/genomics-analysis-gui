@@ -1,0 +1,187 @@
+/************************background, text, blocks arrangment****************/
+ body { 
+    background-color: honeydew; 
+} 
+
+* {
+	font-family: Arial;
+}
+
+header {
+	margin: 50px 0 60px 0;
+	text-align: center;
+	font-size: 55px;
+	font-weight: bold;
+	text-shadow: 4px 4px 3px white;
+}
+
+#panels {
+	float: left;
+	width: 26%;
+	margin: 0 2% 0 2%;
+}
+
+#panels * {
+	margin-bottom: 7px;
+	font-size:18px;
+}
+
+#cal {
+	float: left;
+	width: 870px;
+	box-shadow: 1px 2px 3px rgba(0,0,0,.7);
+	margin: 0 1% 0 1%;
+	display:table; 
+	-webkit-border-radius: 10px;
+}
+
+#cal #cal-frame {
+	width: 840px;
+	margin: 15px;
+}
+
+#sideinfo {
+	float: left;
+	width:21%;
+	height: 716px;
+	box-shadow: 1px 2px 3px rgba(0,0,0,.7);
+}
+
+#notation {
+	padding: 15px 10px 10px 20px;
+	font-weight: 600;
+	font-size: 20px;
+	text-shadow: 1px 1px 2px white;
+	color: midnightblue;
+}
+
+.dot {
+	height: 25px;
+	width: 25px;
+	float: left;
+	border-radius: 50%;
+	margin-right: 5px;
+	margin-left: 25px;
+	box-shadow: 1px 2px 1px rgba(0,0,0,.5);
+}
+
+#dot1 {
+	background-color: palegreen;
+}
+
+#dot2 {
+	background-color: lightsalmon;
+}
+
+/************************panels*******************************/
+#signup_form {
+	box-shadow: 1px 2px 3px rgba(0,0,0,.7);
+	margin-bottom: 30px;
+	padding: 10px 10px 10px 20px;
+}
+
+#remove_form {
+	box-shadow: 1px 2px 3px rgba(0,0,0,.7);
+	margin-bottom: 30px;
+	padding: 10px 10px 10px 20px;
+}
+/*************************Calendar***************************/
+#cal .header { 
+	text-align: center;
+    background: rgba(50,50,100,.5);
+    height: 40px;
+    color:#fff; 
+    border-top-left-radius:10px; 
+    border-top-right-radius:10px; 
+    font-weight:bold;
+    text-transform: uppercase; 
+	font-size: 20px;
+} 
+
+#cal .header span { 
+    display:inline-block; 
+    line-height:34px; 
+}
+ 
+#cal .header .left.button { 
+	margin-right: 20px;
+} 
+
+#cal .header .right.button { 
+	margin-left: 20px;
+} 
+
+#cal .header .button:hover { 
+    font-size:20px;
+	font-weight:bold;
+}
+
+#cal .header .month-year { 
+    letter-spacing: 1px;
+}
+
+#cal table { 
+    border-collapse:collapse; 
+}
+
+#cal .curr td { 
+    width:120px; 
+    height:120px;
+    border:1px solid #e6e6e6; 
+    cursor:default;
+}
+
+#cal #days {
+	margin-left: 5px;
+	margin-top: 5px;
+	font-weight:bold;
+	color: dimgray;
+}
+	
+#cal #days td { 
+    height:23px; 
+    line-height:23px; 
+    text-transform:uppercase;
+	width: 120px;
+	text-align: center;
+}
+
+/* 
+#cal #days td:not(:last-child) { 
+    border-right:1px solid #fff; 
+}
+
+#cal #cal-frame td.today { 
+    background:#ededed; 
+    color:#8c8c8c; 
+    box-shadow:1px 1px 0px #fff inset; 
+    -moz-box-shadow:1px 1px 0px #fff inset; 
+    -webkit-box-shadow:1px 1px 0px #fff inset; 
+} 
+#cal #cal-frame td:not(.nil):hover { 
+    color:#fff; 
+    text-shadow: #6C1A07 0px -1px; 
+    background:#CD310D; 
+    background: -moz-linear-gradient(top, #b32b0c, #cd310d); 
+    background: -webkit-gradient(linear, left top, left bottom, from(#b32b0c), to(#cd310d)); 
+    -moz-box-shadow:0px 0px 0px; 
+    -webkit-box-shadow:0px 0px 0px; 
+}
+
+#cal #cal-frame td span { 
+    font-size:80%; 
+    position:relative; 
+} 
+#cal #cal-frame td span:first-child { 
+    bottom:5px; 
+} 
+#cal #cal-frame td span:last-child { 
+    top:5px; 
+}
+#cal #cal-frame table.curr { 
+    float:left;      
+} 
+#cal #cal-frame table.temp { 
+    position:absolute; 
+}
+*/

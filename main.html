@@ -1,0 +1,165 @@
+<!DOCTYPE html> 
+<html> 
+<head> 
+    <meta charset="utf-8" /> 
+    <title>Sign Up for ABI Machine</title> 
+    <link rel="stylesheet" href="main.css" /> 
+	<!--script src="calendar.js"></script-->
+</head> 
+<body> 
+
+
+	<header>Sign Up For ABI Machine</header>
+	
+	
+	<div id="panels">
+		<form id="signup_form">
+		<h2 style="text-align: center;text-shadow: 1px 1px 1px white;"> Sign Up </h2>
+		Date:
+		<input style="margin-left:110px;" type="text" name="theDate" value="MM/DD/YYYY"><br>
+
+		User: 
+		<input style="margin-left:110px;" type="text" name="username"><br>
+
+		Number of Markers:
+		<input style="margin-left:8px;" type="text" name="markers"><br>
+
+		Ladder:
+		<input style="margin-left:95px;" type="radio" name="ladder" value="445" checked> 445
+		<input style="margin-left:10px;" type="radio" name="ladder" value="680"> 680
+		<input style="margin-left:10px;" type="radio" name="ladder" value="1400"> 1400
+		<br>
+		
+		Fluor:
+		<input style="margin-left:110px;" type="checkbox" name="fluor" value="FAM" checked> FAM
+		<input type="checkbox" name="fluor" value="VIC"> VIC
+		<input type="checkbox" name="fluor" value="NED"> NED
+		<input type="checkbox" name="fluor" value="PET"> PET
+		<br>
+		
+		Plate Type:
+		<input style="margin-left:70px;" type="radio" name="ptype" value="96" checked> 96
+		<input type="radio" name="ptype" value="384"> 384
+		<br>
+
+		Principle Investigator:
+		<input type="text" name="principleInvestigator"><br>
+
+		Plate Name:
+		<input style="margin-left:64px;" type="text" name="plateName"><br>
+
+		Email:
+		<input style="margin-left:109px;" type="text" name="email"><br>
+
+		<input type="button" value="Sign Up"
+		  onclick="google.script
+								.run.SignUpJS(this.parentNode)
+								.host.close()" />
+		</form>
+	
+	
+		<form id="remove_form"> 
+		<h2 style="text-align: center;text-shadow: 1px 1px 1px white;"> Remove </h2>
+		Date:
+		<input style="margin-left:110px;" type="text" name="theDate" value="MM/DD/YYYY"><br>
+
+		User: 
+		<input style="margin-left:110px;" type="text" name="username"><br>
+		
+		Password <input style="margin-left:78px;" type="password" name="pwd"> <br>
+		<input type="button" value="Continue"
+		  onclick="google.script
+								.run.RemovePlate(this.parentNode)
+								.host.close()" />
+								
+		<input type="button" value="Cancel"
+		  onclick="google.script.host.close()" />
+		</form>
+	</div>
+	
+	
+	<div id="cal"> 
+		<div class="header"> 
+			<span class="left button" id="prev"> &lang; </span> 
+			<span class="month-year" id="label"> June 20&0 </span> 
+			<span class="right button" id="next"> &rang; </span>
+		</div> 
+		<table id="days"> 
+			<td>sun</td> 
+			<td>mon</td> 
+			<td>tue</td> 
+			<td>wed</td> 
+			<td>thu</td> 
+			<td>fri</td> 
+			<td>sat</td>
+		</table> 
+		<div id="cal-frame"> 
+			<table class="curr"> 
+				<tbody> 
+					<tr>
+						<td class="nil"></td>
+						<td class="nil"></td>
+						<td>1</td><td>2</td>
+						<td>3</td><td>4</td>
+						<td>5</td>
+					</tr> 
+					
+					<tr>
+						<td><table>6</table></td>
+						<td>7</td>
+						<td>8</td>
+						<td>9</td>
+						<td>10</td>
+						<td>11</td>
+						<td>12</td>
+					</tr> 
+					
+					<tr>
+						<td>13</td>
+						<td>14</td>
+						<td>15</td>
+						<td>16</td>
+						<td>17</td>
+						<td>18</td>
+						<td>19</td>
+					</tr> 
+					
+					<tr>
+						<td>20</td>
+						<td>21</td>
+						<td>22</td>
+						<td>23</td>
+						<td>24</td>
+						<td>25</td>
+						<td>26</td>
+					</tr> 
+					
+					<tr>
+						<td>27</td>
+						<td>28</td>
+						<td>29</td>
+						<td>30</td>
+						<td class="nil"></td>
+						<td class="nil"></td>
+						<td class="nil"></td>
+					</tr> 
+					
+				</tbody> 
+			</table>
+	 
+		</div> 	
+	</div>
+	
+	<div id="sideinfo">
+		<div id="notation">
+			<div class="dot" id="dot1"></div>
+			<div style="float:left;">available</div>
+			<div class="dot" id="dot2"></div>
+			<div style="float:left;">unavailable</div>
+		</div>
+		<br>
+	</div>
+	
+
+</body> 
+</html>
